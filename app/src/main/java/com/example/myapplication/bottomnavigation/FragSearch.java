@@ -52,13 +52,17 @@ public class FragSearch extends Fragment {
     List<String> categoryCodes = Arrays.asList("400", "200"); // 카테고리 코드
     List<Map<String, String>> fruits = new ArrayList<>(); // 과일 정보를 저장할 리스트
     List<Map<String, String>> veges = new ArrayList<>(); // 채소 정보를 저장할 리스트
+    List<Map<String, String>> rice = new ArrayList<>(); //식량작물 정보를 저장할 리스트
+    List<Map<String, String>> fish = new ArrayList<>(); //수산물 정보를 저장할 리스트
+
     boolean flag = false;
     boolean b = true;
+
     private String readStream(InputStream is) {
         try {
             ByteArrayOutputStream bo = new ByteArrayOutputStream();
             int i = is.read();
-            while(i != -1) {
+            while (i != -1) {
                 bo.write(i);
                 i = is.read();
             }
@@ -81,35 +85,35 @@ public class FragSearch extends Fragment {
         }
         return text;
     }
+
     private static String getTagValue(String tag, Element eElement) {
         NodeList nlList = eElement.getElementsByTagName(tag).item(0).getChildNodes();
         Node nValue = (Node) nlList.item(0);
-        if(nValue == null)
+        if (nValue == null)
             return null;
         return nValue.getNodeValue();
     }
 
 
-
-
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState){
-        view = inflater.inflate(R.layout.frag_search,container,false);
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        view = inflater.inflate(R.layout.frag_search, container, false);
 
         System.out.println(fruits.size());
         System.out.println(veges.size());
-        if(b==true) {
+        if (b == true) {
             new Thread(() -> {
-                for (String code : categoryCodes) {
+                List<String> codes = Arrays.asList("400");
+                for (String code: codes) {
                     String url_text = "https://www.kamis.or.kr/service/price/xml.do?action=dailyPriceByCategoryList&p_product_cls_code=02&p_country_code=1101&" +
-                            "p_regday=2023-06-23&" +
+                            "p_regday=2023-06-30&"+
                             "p_convert_kg_yn=N&" +
                             "p_item_category_code=" + code + "&" +
                             "p_cert_key=" + API_KEY + "&p_cert_id=222&p_returntype=xml";
 
                     String text = getText(url_text);
-
+                    System.out.println(text);
                     //            System.out.println(text);
 
                     Document doc = convertStringToDocument(text);
@@ -122,7 +126,9 @@ public class FragSearch extends Fragment {
                         Node nNode = nList.item(temp);
                         if (nNode.getNodeType() == Node.ELEMENT_NODE) {
                             Element eElement = (Element) nNode;
-                            if (getTagValue("rank", eElement).contains("중품") || getTagValue("rank", eElement).contains("M과") || getTagValue("item_name", eElement).contains("마늘"))
+                            if (getTagValue("rank", eElement).contains("중품") || getTagValue("rank", eElement).contains("M과") ||
+                                    getTagValue("item_name", eElement).contains("마늘")||
+                                    getTagValue("item_name", eElement).contains("찹쌀"))
                                 continue;
 //                        System.out.println("######################");
 //                        System.out.println("상품 이름  : " + getTagValue("item_name", eElement));
@@ -140,11 +146,6 @@ public class FragSearch extends Fragment {
                             info.put("dpr2", getTagValue("dpr2", eElement));
                             info.put("dpr3", getTagValue("dpr3", eElement));
 
-                            if (code.equals("400")) {
-                                fruits.add(info);
-                            } else if (code.equals("200")) {
-                                veges.add(info);
-                            }
 
                         }   // if end
                     }   // for end
@@ -152,11 +153,60 @@ public class FragSearch extends Fragment {
                 b = false;
             }).start();
 
-            while (b) {}
+            new Thread(() -> {
+                List<String> codes = Arrays.asList("200");
+                for (String code: codes) {
+                    String url_text = "https://www.kamis.or.kr/service/price/xml.do?action=dailyPriceByCategoryList&p_product_cls_code=02&p_country_code=1101&" +
+                            "p_regday=2023-06-30&"+
+                            "p_convert_kg_yn=N&" +
+                            "p_item_category_code=" + code + "&" +
+                            "p_cert_key=" + API_KEY + "&p_cert_id=222&p_returntype=xml";
+
+                    String text = getText(url_text);
+                    System.out.println(text);
+                    //            System.out.println(text);
+
+                    Document doc = convertStringToDocument(text);
+
+                    // 필요한 정보 뽑아내는 코드 구현
+                    NodeList nList = doc.getElementsByTagName("item");
+//                System.out.println("파싱할 리스트 수 : "+ nList.getLength());
+
+                    for (int temp = 1; temp < nList.getLength(); temp++) {
+                        Node nNode = nList.item(temp);
+                        if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+                            Element eElement = (Element) nNode;
+                            if (getTagValue("rank", eElement).contains("중품") || getTagValue("rank", eElement).contains("M과") ||
+                                    getTagValue("item_name", eElement).contains("마늘")||
+                                    getTagValue("item_name", eElement).contains("찹쌀"))
+                                continue;
+//
+
+
+                            Map<String, String> info = new HashMap<>();
+                            info.put("item_name", getTagValue("item_name", eElement) + "\n" + getTagValue("kind_name", eElement));
+                            info.put("item_code", getTagValue("item_code", eElement));
+                            info.put("dpr1", getTagValue("dpr1", eElement));
+                            info.put("dpr2", getTagValue("dpr2", eElement));
+                            info.put("dpr3", getTagValue("dpr3", eElement));
+
+                        }   // if end
+                    }   // for end
+                } // for end
+                b = false;
+            }).start();
+
+
+
+            while (b) {
+            }
         }
 
         System.out.println("Fruits: " + fruits.size());
         System.out.println("Vegetables: " + veges.size());
+        System.out.println("Rice: " + rice.size());
+        System.out.println("Fish: " + fish.size());
+
 
 
         List<Integer> drawables = Arrays.asList(R.drawable.apple, R.drawable.pear,
@@ -165,15 +215,14 @@ public class FragSearch extends Fragment {
                 R.drawable.kimchicabbage, R.drawable.cabbage, R.drawable.spinach, R.drawable.redlettuce,
                 R.drawable.lettuce, R.drawable.wintercabbage, R.drawable.watermelon, R.drawable.orientalmelon,
                 R.drawable.dadagi, R.drawable.cucumber, R.drawable.babypumpkin, R.drawable.zukini, R.drawable.tomato,
-                R.drawable.radish, R.drawable.carrot, R.drawable.youngradish,R.drawable.driedhotpepper,
-                R.drawable.greenchillpepper, R.drawable.twistedpepper, R.drawable.hotpepper,R.drawable.cucumberpepper,
+                R.drawable.radish, R.drawable.carrot, R.drawable.youngradish, R.drawable.driedhotpepper,
+                R.drawable.greenchillpepper, R.drawable.twistedpepper, R.drawable.hotpepper, R.drawable.cucumberpepper,
                 R.drawable.redpepper, R.drawable.onion, R.drawable.greenonion, R.drawable.chive,
                 R.drawable.ginger, R.drawable.minari, R.drawable.leaf, R.drawable.greenpaprika,
                 R.drawable.paprika, R.drawable.melon, R.drawable.babycabbage, R.drawable.broccoli,
-                R.drawable.cherrytomato);
-
-
-
+                R.drawable.cherrytomato, R.drawable.rice, R.drawable.stickyrice, R.drawable.bean,
+                R.drawable.adzukibean, R.drawable.mungbean, R.drawable.sweetpotato,
+                R.drawable.potato);
 
 
         //===== 테스트를 위한 더미 데이터 생성 ===================
@@ -181,7 +230,7 @@ public class FragSearch extends Fragment {
 
 
         // For fruits
-        for(int i=0; i<fruits.size(); i++){
+        for (int i = 0; i < fruits.size(); i++) {
             String item_name = fruits.get(i).get("item_name");
             String dpr1 = fruits.get(i).get("dpr1");
             String dpr3 = fruits.get(i).get("dpr3");
@@ -189,7 +238,7 @@ public class FragSearch extends Fragment {
             int drawableId;
             drawableId = R.drawable.apple;
 
-            if(i < drawables.size()){
+            if (i < drawables.size()) {
                 drawableId = drawables.get(i);
             } else {
                 // Default drawableId if there are not enough drawables
@@ -201,7 +250,7 @@ public class FragSearch extends Fragment {
         }
 
         // For vegetables
-        for(int i=0; i<veges.size(); i++){
+        for (int i = 0; i < veges.size(); i++) {
             String item_name = veges.get(i).get("item_name");
             String dpr1 = veges.get(i).get("dpr1");
             String dpr3 = veges.get(i).get("dpr3");
@@ -209,8 +258,8 @@ public class FragSearch extends Fragment {
             int drawableId;
             drawableId = R.drawable.default_vege;  // you may need a different default image for vegetables
 
-            if(i+fruits.size() < drawables.size()){
-                drawableId = drawables.get(i+fruits.size());
+            if (i + fruits.size() < drawables.size()) {
+                drawableId = drawables.get(i + fruits.size());
             } else {
                 // Default drawableId if there are not enough drawables
                 drawableId = R.drawable.default_image;
@@ -220,6 +269,45 @@ public class FragSearch extends Fragment {
         }
 
 
+        // For rice
+        for (int i = 0; i < rice.size(); i++) {
+            String item_name = rice.get(i).get("item_name");
+            String dpr1 = rice.get(i).get("dpr1");
+            String dpr3 = rice.get(i).get("dpr3");
+
+            int drawableId;
+            drawableId = R.drawable.default_vege;  // you may need a different default image for rice
+
+            int k= 45;
+            if (i + k < drawables.size()) {
+                drawableId = drawables.get(i+k);
+            } else {
+                // Default drawableId if there are not enough drawables
+                drawableId = R.drawable.default_image;
+            }
+
+            testDataSet.add(new DataModel(item_name, drawableId, dpr1, dpr3));
+        }
+
+        //for fish
+
+        for (int i = 0; i < fish.size(); i++) {
+            String item_name = fish.get(i).get("item_name");
+            String dpr1 = fish.get(i).get("dpr1");
+            String dpr3 = fish.get(i).get("dpr3");
+
+            int drawableId;
+            drawableId = R.drawable.default_vege;  // you may need a different default image for vegetables
+
+            if (i + rice.size() < drawables.size()) {
+                drawableId = drawables.get(i + rice.size());
+            } else {
+                // Default drawableId if there are not enough drawables
+                drawableId = R.drawable.default_image;
+            }
+
+            testDataSet.add(new DataModel(item_name, drawableId, dpr1, dpr3));
+        }
 
 
         //========================================================
@@ -245,6 +333,7 @@ public class FragSearch extends Fragment {
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
 
             }
+
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
 
@@ -255,10 +344,9 @@ public class FragSearch extends Fragment {
                 String searchText = editText.getText().toString();
                 search_list.clear();
 
-                if(searchText.equals("")){
+                if (searchText.equals("")) {
                     customAdapter.setItems(testDataSet);
-                }
-                else {
+                } else {
                     // 검색 단어를 포함하는지 확인
                     for (int a = 0; a < testDataSet.size(); a++) {
                         if (testDataSet.get(a).title.toLowerCase().contains(searchText.toLowerCase())) {
@@ -271,10 +359,6 @@ public class FragSearch extends Fragment {
         });
         return view;
     }
-
-
-
-
 
 
     private Document convertStringToDocument(String xmlStr) {
@@ -290,8 +374,5 @@ public class FragSearch extends Fragment {
         }
         return null;
     }
-
-
-
-
 }
+
